@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const validator = require("validator");
+const jwt = require("jsonwebtoken");
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -40,10 +41,26 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpire: Date,
 });
 
+//Hashing Password before Save .
+
 userSchema.pre("save",async function(next){
-    if(!this.isModified("password")){
+  // when user only change other staff with out password then this will be called.
+    if(!this.isModified("password")){ 
         next()
     }
+  // if user change password then this code block will be called.
     this.password = await bcrypt.hash(this.password,10);
 })
+
+//Generate jwt token
+userSchema.methods.getJWTToken = function (){
+  return jwt.sign({id:this._id},process.env.JWT_SECRET,{ expiresIn:process.env.JWT_EXPIRE })
+}
+
+//Compare Password
+userSchema.methods.comparePassword = async function (enteredPassword){
+  return await bcrypt.compare(enteredPassword,this.password)
+  
+}
+
 module.exports = mongoose.model("User",userSchema)
